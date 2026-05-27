@@ -1,69 +1,47 @@
 import { create } from 'zustand'
 import { audioEngine } from '../engine/AudioEngine'
+import { pushSnapshot, clearHistory } from './history'
 
-let projectHandle: any = null
-
-async function saveBlobToDisk(blob: Blob, suggestedName: string, extraTypes?: { description: string; accept: Record<string, string[]> }[]): Promise<string | null> {
-  try {
-    const w = window as any
-    const fileTypes = extraTypes || [{
-      description: 'Audio Files',
-      accept: { 'audio/webm': ['.webm'], 'audio/wav': ['.wav'] },
-    }]
-    const handle = await w.showSaveFilePicker({
-      suggestedName,
-      types: fileTypes,
-    })
-    const writable = await handle.createWritable()
-    await writable.write(blob)
-    await writable.close()
-    return handle.name
-  } catch {
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = suggestedName
-    a.click()
-    URL.revokeObjectURL(url)
-    return suggestedName
-  }
-}
-
-async function saveProjectToDisk(blob: Blob, suggestedName: string) {
-  try {
-    const w = window as any
-    if (!projectHandle) {
-      projectHandle = await w.showSaveFilePicker({
-        suggestedName,
-        types: [{ description: 'BonSon Project', accept: { 'application/json': ['.bonson'] } }],
-      })
-    }
-    const writable = await projectHandle.createWritable()
-    await writable.write(blob)
-    await writable.close()
-    return projectHandle.name
-  } catch {
-    // If user cancels or API fails, fall back to download
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = suggestedName
-    a.click()
-    URL.revokeObjectURL(url)
-    return suggestedName
-  }
-}
+const AUTO_SAVE_KEY = 'bonson_autosave'
+const AUTO_SAVE_INTERVAL = 30000
 
 async function finishRecording(targetTrackId: string) {
   const blob = audioEngine.stopRecording()
   if (!blob) return
 
-  const suggestedName = `Recording_${new Date().toISOString().slice(0, 19).replace(/[:-]/g, '_')}.webm`
-  const savedName = await saveBlobToDisk(blob, suggestedName) || suggestedName
+  const state = useStore.getState()
+  const audioDir = state.audioDirHandle
 
-  // Load into the track's buffer for playback
-  const url = URL.createObjectURL(blob)
+  const timestamp = new Date().toISOString().slice(0, 19).replace(/[:-]/g, '_')
+  const filename = `Recording_${timestamp}.webm`
+
+  let savedName = filename
+  let url: string
+
+  if (audioDir) {
+    const fileHandle = await audioDir.getFileHandle(filename, { create: true })
+    const writable = await fileHandle.createWritable()
+    await writable.write(blob)
+    await writable.close()
+    savedName = fileHandle.name
+    const file = await fileHandle.getFile()
+    url = URL.createObjectURL(file)
+  } else {
+    url = URL.createObjectURL(blob)
+  }
+
   await useStore.getState().loadTrackAudio(targetTrackId, url, savedName)
+}
+
+export async function copyFileToAudioFolder(file: File): Promise<string> {
+  const { audioDirHandle } = useStore.getState()
+  if (!audioDirHandle) return URL.createObjectURL(file)
+  const fileHandle = await audioDirHandle.getFileHandle(file.name, { create: true })
+  const writable = await fileHandle.createWritable()
+  await writable.write(await file.arrayBuffer())
+  await writable.close()
+  const savedFile = await fileHandle.getFile()
+  return URL.createObjectURL(savedFile)
 }
 
 function encodeWav(samples: Float32Array, sampleRate: number): Blob {
@@ -156,6 +134,9 @@ interface Store {
   transport: TransportState
   selectedTrackId: string | null
   projectName: string
+  projectRootHandle: FileSystemDirectoryHandle | null
+  projectRootName: string
+  audioDirHandle: FileSystemDirectoryHandle | null
   addTrack: (name: string, color: string) => void
   removeTrack: (id: string) => void
   selectTrack: (id: string) => void
@@ -165,6 +146,7 @@ interface Store {
   setTransport: (partial: Partial<TransportState>) => void
   setZoom: (zoom: number) => void
   setProjectName: (name: string) => void
+  setProjectRoot: (handle: FileSystemDirectoryHandle) => Promise<void>
   togglePlay: () => void
   stopPlayback: () => void
   toggleRecord: () => Promise<void>
@@ -173,6 +155,7 @@ interface Store {
   saveProject: () => Promise<void>
   exportWav: () => Promise<void>
   initEngine: () => Promise<void>
+  loadProject: (data: any) => void
   toggleTrackEffect: (trackId: string, index: number) => void
   setTrackEffectParam: (trackId: string, index: number, param: string, value: number) => void
   setTrackSendLevel: (trackId: string, index: number, level: number) => void
@@ -225,18 +208,13 @@ export const useStore = create<Store>((set) => {
   }
 
   return {
-    tracks: [
-      defaultTrack('1', 'Vocal Lead',   defaultColors[0]),
-      defaultTrack('2', 'Arp Synth',    defaultColors[1]),
-      defaultTrack('3', 'Sub Bass',     defaultColors[2]),
-      defaultTrack('4', 'Drum Kit',     defaultColors[3]),
-      defaultTrack('5', 'Pad Texture',  defaultColors[4]),
-      defaultTrack('6', 'FX Noise',     defaultColors[5]),
-      defaultTrack('7', 'Strings High', defaultColors[6]),
-    ],
+    tracks: [],
 
     selectedTrackId: null,
     projectName: 'Untitled',
+    projectRootHandle: null,
+    projectRootName: '',
+    audioDirHandle: null,
 
     transport: {
       isPlaying: false,
@@ -257,8 +235,10 @@ export const useStore = create<Store>((set) => {
     addTrack: (name, color) => set(state => {
       const id = `track_${++trackCounter}`
       audioEngine.createTrack(id)
+      const track = defaultTrack(id, name, color)
+      audioEngine.rebuildEffects(id, track.effects)
       return {
-        tracks: [...state.tracks, defaultTrack(id, name, color)],
+        tracks: [...state.tracks, track],
       }
     }),
 
@@ -270,6 +250,7 @@ export const useStore = create<Store>((set) => {
     setTrackProp: (id, key, value) => set(state => {
       if (key === 'volume') audioEngine.setTrackVolume(id, value as number)
       if (key === 'pan') audioEngine.setTrackPan(id, value as number)
+      if (key === 'effects') audioEngine.rebuildEffects(id, value as any[])
       return {
         tracks: state.tracks.map(t => t.id === id ? { ...t, [key]: value } : t),
       }
@@ -295,6 +276,31 @@ export const useStore = create<Store>((set) => {
 
     setProjectName: (name) => set({ projectName: name }),
 
+    setProjectRoot: async (handle: FileSystemDirectoryHandle) => {
+      const audioDir = await handle.getDirectoryHandle('Audio', { create: true })
+      set({
+        projectRootHandle: handle,
+        projectRootName: handle.name,
+        audioDirHandle: audioDir,
+      })
+      // Create default tracks for the fresh project
+      const colorList = defaultColors
+      const defaultNames = ['Vocal Lead', 'Arp Synth', 'Sub Bass', 'Drum Kit', 'Pad Texture', 'FX Noise', 'Strings High']
+      audioEngine.stop()
+      audioEngine.destroy()
+      audioEngine.init()
+      trackCounter = 0
+      const newTracks = defaultNames.map((name, i) => {
+        const id = `track_${++trackCounter}`
+        audioEngine.createTrack(id)
+        const track = defaultTrack(id, name, colorList[i % colorList.length])
+        audioEngine.rebuildEffects(id, track.effects)
+        return track
+      })
+      set({ tracks: newTracks, selectedTrackId: null })
+      clearHistory()
+    },
+
     initEngine: async () => {
       await audioEngine.init()
       // create audio nodes for existing tracks
@@ -306,19 +312,58 @@ export const useStore = create<Store>((set) => {
       }
     },
 
-    toggleTrackEffect: (trackId, index) => set(state => ({
-      tracks: state.tracks.map(t => t.id === trackId ? {
-        ...t,
-        effects: t.effects.map((e, i) => i === index ? { ...e, enabled: !e.enabled } : e),
-      } : t),
-    })),
+    loadProject: (data) => {
+      if (!data || !data.tracks) return
+      // Rebuild the audio engine for the new project
+      audioEngine.stop()
+      audioEngine.destroy()
+      audioEngine.init()
+      trackCounter = 0
 
-    setTrackEffectParam: (trackId, index, param, value) => set(state => ({
-      tracks: state.tracks.map(t => t.id === trackId ? {
-        ...t,
-        effects: t.effects.map((e, i) => i === index ? { ...e, params: { ...e.params, [param]: value } } : e),
-      } : t),
-    })),
+      const tracks = data.tracks.map((t: any, i: number) => {
+        const track = defaultTrack(t.id || `track_${++trackCounter}`, t.name, t.color || defaultColors[i % defaultColors.length])
+        return track
+      })
+      set({
+        projectName: data.projectName || 'Untitled',
+        transport: {
+          isPlaying: false,
+          isRecording: false,
+          position: 0,
+          duration: 0,
+          bpm: data.transport?.bpm ?? 120,
+          timeSignature: data.transport?.timeSignature ?? [4, 4],
+          zoom: data.transport?.zoom ?? 1,
+        },
+        tracks,
+        selectedTrackId: null,
+      })
+      for (const t of useStore.getState().tracks) {
+        audioEngine.createTrack(t.id)
+        audioEngine.rebuildEffects(t.id, t.effects)
+      }
+      clearHistory()
+    },
+
+    toggleTrackEffect: (trackId, index) => set(state => {
+      const newEffects = state.tracks
+        .find(t => t.id === trackId)
+        ?.effects.map((e, i) => i === index ? { ...e, enabled: !e.enabled } : e)
+      if (newEffects) audioEngine.rebuildEffects(trackId, newEffects)
+      return {
+        tracks: state.tracks.map(t => t.id === trackId ? { ...t, effects: newEffects || t.effects } : t),
+      }
+    }),
+
+    setTrackEffectParam: (trackId, index, param, value) => set(state => {
+      const newEffects = state.tracks
+        .find(t => t.id === trackId)
+        ?.effects.map((e, i) => i === index ? { ...e, params: { ...e.params, [param]: value } } : e)
+      if (newEffects) audioEngine.rebuildEffects(trackId, newEffects)
+      return {
+        tracks: state.tracks.map(t => t.id === trackId ? { ...t, effects: newEffects || t.effects } : t),
+      }
+    }),
 
     setTrackSendLevel: (trackId, index, level) => set(state => ({
       tracks: state.tracks.map(t => t.id === trackId ? {
@@ -375,7 +420,8 @@ export const useStore = create<Store>((set) => {
     },
 
     newProject: () => {
-      projectHandle = null
+      clearHistory()
+      clearAutoSave()
       audioEngine.stop()
       audioEngine.destroy()
       audioEngine.init()
@@ -395,21 +441,81 @@ export const useStore = create<Store>((set) => {
     },
 
     saveProject: async () => {
-      const { tracks, transport, projectName } = useStore.getState()
+      const { tracks, transport, projectName, projectRootHandle } = useStore.getState()
+      if (!projectRootHandle) return
       const data = { version: 1, projectName, tracks, transport: { bpm: transport.bpm, timeSignature: transport.timeSignature, zoom: transport.zoom } }
       const json = JSON.stringify(data, null, 2)
       const blob = new Blob([json], { type: 'application/json' })
-      await saveProjectToDisk(blob, `${projectName}.bonson`)
+      const fileHandle = await projectRootHandle.getFileHandle(`${projectName}.bonson`, { create: true })
+      const writable = await fileHandle.createWritable()
+      await writable.write(blob)
+      await writable.close()
     },
 
     exportWav: async () => {
-      const { tracks } = useStore.getState()
+      const { tracks, audioDirHandle } = useStore.getState()
       const firstWithAudio = tracks.find(t => t.hasAudio)
       if (!firstWithAudio) return
       const data = audioEngine.getTrackBufferData(firstWithAudio.id)
       if (!data || data.length === 0) return
       const blob = encodeWav(data[0], 44100)
-      await saveBlobToDisk(blob, firstWithAudio.clipName?.replace(/\.[^.]+$/, '') + '.wav')
+      if (audioDirHandle) {
+        const filename = (firstWithAudio.clipName || 'export').replace(/\.[^.]+$/, '') + '.wav'
+        const fileHandle = await audioDirHandle.getFileHandle(filename, { create: true })
+        const writable = await fileHandle.createWritable()
+        await writable.write(blob)
+        await writable.close()
+      }
     },
   }
 })
+
+// --- History: push snapshot on every state change ---
+useStore.subscribe((state, prev) => {
+  if (state.tracks !== prev.tracks || state.transport.bpm !== prev.transport.bpm || state.transport.zoom !== prev.transport.zoom) {
+    pushSnapshot()
+  }
+})
+
+// --- Auto-save to localStorage ---
+function autoSave() {
+  try {
+    const state = useStore.getState()
+    const data = {
+      projectName: state.projectName,
+      transport: { bpm: state.transport.bpm, timeSignature: state.transport.timeSignature, zoom: state.transport.zoom },
+      tracks: state.tracks,
+      savedAt: Date.now(),
+    }
+    localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(data))
+  } catch { /* storage full or unavailable */ }
+}
+
+let autoSaveTimer: ReturnType<typeof setInterval> | null = null
+
+export function startAutoSave() {
+  stopAutoSave()
+  autoSaveTimer = setInterval(autoSave, AUTO_SAVE_INTERVAL)
+}
+
+export function stopAutoSave() {
+  if (autoSaveTimer !== null) {
+    clearInterval(autoSaveTimer)
+    autoSaveTimer = null
+  }
+}
+
+export function loadAutoSave(): any {
+  try {
+    const raw = localStorage.getItem(AUTO_SAVE_KEY)
+    if (!raw) return null
+    return JSON.parse(raw)
+  } catch { return null }
+}
+
+export function clearAutoSave() {
+  localStorage.removeItem(AUTO_SAVE_KEY)
+}
+
+// Start auto-save on import
+startAutoSave()

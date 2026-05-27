@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { useStore } from '../store/useStore'
+import { useStore, copyFileToAudioFolder } from '../store/useStore'
 import Waveform from '../components/Waveform'
 import RecordingWaveform from '../components/RecordingWaveform'
 import ContextMenu from '../components/ContextMenu'
@@ -45,7 +45,7 @@ export default function ArrangementView() {
     e.preventDefault()
     const file = e.dataTransfer.files[0]
     if (!file || !file.type.startsWith('audio/')) return
-    const url = URL.createObjectURL(file)
+    const url = await copyFileToAudioFolder(file)
     await loadTrackAudio(trackId, url, file.name)
   }, [loadTrackAudio])
 
@@ -217,6 +217,7 @@ export default function ArrangementView() {
                 {/* Waveform clip — width scales with zoom */}
                 {t.hasAudio && t.clipDuration > 0 && (
                   <div
+                    key={t.clipName}
                     className="absolute inset-y-1 left-1 rounded overflow-hidden"
                     style={{
                       width: t.clipDuration * pxPerSec,
@@ -224,7 +225,7 @@ export default function ArrangementView() {
                       borderLeft: `3px solid ${t.color}`,
                     }}
                   >
-                    <Waveform trackId={t.id} color={t.color} />
+                    <Waveform trackId={t.id} color={t.color} clipDuration={t.clipDuration} />
                   </div>
                 )}
 

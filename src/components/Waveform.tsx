@@ -4,6 +4,7 @@ import { audioEngine } from '../engine/AudioEngine'
 interface WaveformProps {
   trackId: string
   color: string
+  clipDuration: number
 }
 
 function drawWaveform(canvas: HTMLCanvasElement, trackId: string, color: string) {
@@ -42,24 +43,29 @@ function drawWaveform(canvas: HTMLCanvasElement, trackId: string, color: string)
   return true
 }
 
-export default function Waveform({ trackId, color }: WaveformProps) {
+export default function Waveform({ trackId, color, clipDuration }: WaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    // Schedule draw after layout
-    const raf = requestAnimationFrame(() => drawWaveform(canvas, trackId, color))
+    let retries = 0
+    const maxRetries = 20
+    function tryDraw(c: HTMLCanvasElement) {
+      if (drawWaveform(c, trackId, color)) return
+      retries++
+      if (retries < maxRetries) setTimeout(() => tryDraw(c), 50)
+    }
+    tryDraw(canvas)
 
     const ro = new ResizeObserver(() => drawWaveform(canvas, trackId, color))
     ro.observe(canvas)
 
     return () => {
-      cancelAnimationFrame(raf)
       ro.disconnect()
     }
-  }, [trackId, color])
+  }, [trackId, color, clipDuration])
 
   return (
     <div className="w-full h-full" style={{ opacity: 0.7 }}>

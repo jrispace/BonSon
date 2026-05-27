@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useRef, useCallback } from 'react'
-import { useStore } from '../store/useStore'
+import { useStore, copyFileToAudioFolder } from '../store/useStore'
 
 const libraryItems = [
   { label: 'Arrangement', icon: 'view_timeline' },
@@ -34,7 +34,7 @@ export default function Sidebar() {
   const handleImportAudio = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const url = URL.createObjectURL(file)
+    const url = await copyFileToAudioFolder(file)
     await doLoad(url, file.name)
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
@@ -45,7 +45,7 @@ export default function Sidebar() {
     const color = NEW_TRACK_COLORS[tracks.length % NEW_TRACK_COLORS.length]
     addTrack(file.name.replace(/\.[^.]+$/, ''), color)
     const newTracks = useStore.getState().tracks
-    const url = URL.createObjectURL(file)
+    const url = await copyFileToAudioFolder(file)
     await loadTrackAudio(newTracks[newTracks.length - 1].id, url, file.name)
     if (samplesInputRef.current) samplesInputRef.current.value = ''
   }

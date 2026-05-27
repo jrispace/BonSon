@@ -1,7 +1,9 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useRef, useState, useCallback } from 'react'
-import { useStore } from '../store/useStore'
+import { useStore, copyFileToAudioFolder } from '../store/useStore'
+import { undo, redo } from '../store/history'
 import ConfirmDialog from './ConfirmDialog'
+import FileBrowserModal from './FileBrowserModal'
 
 const NEW_TRACK_COLORS = ['#00dbe7', '#ff6b35', '#a8e06c', '#ffd700', '#ff4080', '#7b68ee', '#32cd32', '#ff8c00']
 
@@ -17,6 +19,7 @@ export default function TopNavBar() {
   const navigate = useNavigate()
   const location = useLocation()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const projectInputRef = useRef<HTMLInputElement>(null)
   const loadTrackAudio = useStore(s => s.loadTrackAudio)
   const tracks = useStore(s => s.tracks)
   const selectedTrackId = useStore(s => s.selectedTrackId)
@@ -29,9 +32,12 @@ export default function TopNavBar() {
   const newProject = useStore(s => s.newProject)
   const saveProject = useStore(s => s.saveProject)
   const exportWav = useStore(s => s.exportWav)
+  const loadProject = useStore(s => s.loadProject)
   const projectName = useStore(s => s.projectName)
   const setProjectName = useStore(s => s.setProjectName)
+  const projectRootName = useStore(s => s.projectRootName)
   const [fileMenuOpen, setFileMenuOpen] = useState(false)
+  const [fileBrowserOpen, setFileBrowserOpen] = useState(false)
 
   type PendingFile = { url: string; name: string; targetTrackId: string }
   const [pendingFile, setPendingFile] = useState<PendingFile | null>(null)
@@ -48,7 +54,7 @@ export default function TopNavBar() {
     if (!file) return
     if (fileInputRef.current) fileInputRef.current.value = ''
 
-    const url = URL.createObjectURL(file)
+    const url = await copyFileToAudioFolder(file)
 
     // Determine target track
     let targetId = selectedTrackId
@@ -65,6 +71,18 @@ export default function TopNavBar() {
     } else {
       await doLoad(targetId, url, file.name)
     }
+    closeMenu()
+  }
+
+  const handleLoadProject = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (projectInputRef.current) projectInputRef.current.value = ''
+    try {
+      const text = await file.text()
+      const data = JSON.parse(text)
+      loadProject(data)
+    } catch { /* invalid file */ }
     closeMenu()
   }
 
@@ -100,6 +118,14 @@ export default function TopNavBar() {
           placeholder="Project Name"
           spellCheck={false}
         />
+        <button
+          onClick={() => setFileBrowserOpen(true)}
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] text-outline/50 hover:text-outline hover:bg-surface-high transition-colors group"
+          title={`Project folder: ${projectRootName}`}
+        >
+          <span className="material-symbols-outlined text-[14px]">folder</span>
+          <span className="max-w-[80px] truncate hidden sm:inline">{projectRootName}</span>
+        </button>
       </div>
 
       <div className="flex items-center gap-1">
@@ -120,12 +146,20 @@ export default function TopNavBar() {
           {fileMenuOpen && (
             <div className="absolute top-full left-0 mt-1 w-48 bg-surface-low border border-surface-high rounded shadow-lg z-50 py-1">
               <input ref={fileInputRef} type="file" accept="audio/*" onChange={handleOpenFile} className="hidden" />
+              <input ref={projectInputRef} type="file" accept=".bonson,.json" onChange={handleLoadProject} className="hidden" />
               <button
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full flex items-center gap-3 px-3 py-2 text-[11px] text-on-surface hover:bg-surface-mid transition-colors"
               >
                 <span className="material-symbols-outlined text-base">folder_open</span>
                 Open Audio File
+              </button>
+              <button
+                onClick={() => { if (projectInputRef.current) projectInputRef.current.click() }}
+                className="w-full flex items-center gap-3 px-3 py-2 text-[11px] text-outline hover:bg-surface-mid transition-colors"
+              >
+                <span className="material-symbols-outlined text-base">file_open</span>
+                Load Project
               </button>
               <button
                 onClick={() => { newProject(); closeMenu() }}
@@ -212,6 +246,23 @@ export default function TopNavBar() {
         <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 backdrop-blur-sm text-outline hover:text-on-surface transition-all active:scale-95">
           <span className="material-symbols-outlined text-lg">loop</span>
         </button>
+
+        <div className="w-px h-5 bg-surface-high mx-1" />
+
+        <button
+          onClick={undo}
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 backdrop-blur-sm text-outline hover:text-on-surface transition-all active:scale-95"
+          title="Undo (Ctrl+Z)"
+        >
+          <span className="material-symbols-outlined text-lg">undo</span>
+        </button>
+        <button
+          onClick={redo}
+          className="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 backdrop-blur-sm text-outline hover:text-on-surface transition-all active:scale-95"
+          title="Redo (Ctrl+Shift+Z)"
+        >
+          <span className="material-symbols-outlined text-lg">redo</span>
+        </button>
       </div>
 
       <div className="ml-auto flex items-center gap-4">
@@ -240,6 +291,10 @@ export default function TopNavBar() {
           />
         )
       })()}
+
+      {fileBrowserOpen && (
+        <FileBrowserModal onClose={() => setFileBrowserOpen(false)} />
+      )}
     </nav>
   )
 }

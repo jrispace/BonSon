@@ -11,6 +11,14 @@ interface TrackChannel {
   source: AudioBufferSourceNode | null
   buffer: AudioBuffer | null
   startOffset: number
+  // Effect nodes (inserted between gainNode → panNode)
+  compressorNode: DynamicsCompressorNode | null
+  filterNodes: BiquadFilterNode[]
+  delayNode: DelayNode | null
+  delayFeedback: GainNode | null
+  delayMix: GainNode | null
+  reverbNode: ConvolverNode | null
+  reverbMix: GainNode | null
 }
 
 export interface WaveformFrame {
@@ -78,7 +86,7 @@ export class AudioEngine {
     gainNode.connect(panNode)
     panNode.connect(this.masterGain)
 
-    this.tracks.set(id, { gainNode, panNode, source: null, buffer: null, startOffset: 0 })
+    this.tracks.set(id, { gainNode, panNode, source: null, buffer: null, startOffset: 0, compressorNode: null, filterNodes: [], delayNode: null, delayFeedback: null, delayMix: null, reverbNode: null, reverbMix: null })
   }
 
   removeTrack(id: string) {
@@ -102,6 +110,129 @@ export class AudioEngine {
     const ch = this.tracks.get(id)
     if (!ch) return
     ch.panNode.pan.setValueAtTime(pan, this.ctx?.currentTime ?? 0)
+  }
+
+  rebuildEffects(id: string, effects: any[]) {
+    const ch = this.tracks.get(id)
+    if (!ch || !this.ctx) return
+
+    // Disconnect existing effects
+    try { ch.gainNode.disconnect() } catch {}
+    try { ch.panNode.disconnect() } catch {}
+    if (ch.compressorNode) { try { ch.compressorNode.disconnect() } catch {}; ch.compressorNode.disconnect(); ch.compressorNode = null }
+    ch.filterNodes.forEach(n => { try { n.disconnect() } catch {} })
+    ch.filterNodes = []
+    if (ch.delayNode) { try { ch.delayNode.disconnect() } catch {}; ch.delayNode.disconnect(); ch.delayNode = null }
+    if (ch.delayFeedback) { try { ch.delayFeedback.disconnect() } catch {}; ch.delayFeedback.disconnect(); ch.delayFeedback = null }
+    if (ch.delayMix) { try { ch.delayMix.disconnect() } catch {}; ch.delayMix.disconnect(); ch.delayMix = null }
+    if (ch.reverbNode) { try { ch.reverbNode.disconnect() } catch {}; ch.reverbNode.disconnect(); ch.reverbNode = null }
+    if (ch.reverbMix) { try { ch.reverbMix.disconnect() } catch {}; ch.reverbMix.disconnect(); ch.reverbMix = null }
+
+    // Build chain: gainNode → [effects] → panNode → masterGain
+    let lastNode: AudioNode = ch.gainNode
+
+    for (const fx of effects) {
+      if (!fx.enabled) continue
+      switch (fx.type) {
+        case 'compressor': {
+          const comp = this.ctx.createDynamicsCompressor()
+          comp.threshold.value = fx.params.threshold ?? -24
+          comp.ratio.value = fx.params.ratio ?? 4
+          comp.attack.value = (fx.params.attack ?? 3) / 1000
+          comp.release.value = (fx.params.release ?? 100) / 1000
+          lastNode.connect(comp)
+          lastNode = comp
+          ch.compressorNode = comp
+          break
+        }
+        case 'eq': {
+          if (fx.params.lowGain !== 0) {
+            const low = this.ctx.createBiquadFilter()
+            low.type = 'lowshelf'
+            low.frequency.value = 250
+            low.gain.value = fx.params.lowGain
+            lastNode.connect(low); lastNode = low; ch.filterNodes.push(low)
+          }
+          if (fx.params.midGain !== 0) {
+            const mid = this.ctx.createBiquadFilter()
+            mid.type = 'peaking'
+            mid.frequency.value = fx.params.midFreq ?? 1000
+            mid.Q.value = 1
+            mid.gain.value = fx.params.midGain
+            lastNode.connect(mid); lastNode = mid; ch.filterNodes.push(mid)
+          }
+          if (fx.params.highGain !== 0) {
+            const high = this.ctx.createBiquadFilter()
+            high.type = 'highshelf'
+            high.frequency.value = 4000
+            high.gain.value = fx.params.highGain
+            lastNode.connect(high); lastNode = high; ch.filterNodes.push(high)
+          }
+          break
+        }
+        case 'delay': {
+          if ((fx.params.mix ?? 0) <= 0) break
+          const delay = this.ctx.createDelay(2)
+          delay.delayTime.value = fx.params.time ?? 0.25
+          const feedback = this.ctx.createGain()
+          feedback.gain.value = fx.params.feedback ?? 0.3
+          const mixGain = this.ctx.createGain()
+          mixGain.gain.value = fx.params.mix ?? 0.3
+
+          // Dry/wet: send to delay, mix back
+          const dryGain = this.ctx.createGain()
+          dryGain.gain.value = 1 - (fx.params.mix ?? 0.3)
+          const wetGain = this.ctx.createGain()
+          wetGain.gain.value = (fx.params.mix ?? 0.3)
+
+          lastNode.connect(dryGain)
+          lastNode.connect(delay)
+          delay.connect(feedback)
+          feedback.connect(delay)
+          delay.connect(wetGain)
+          // For now, just mix dry + wet into panNode
+          dryGain.connect(ch.panNode)
+          wetGain.connect(ch.panNode)
+          ch.delayNode = delay
+          ch.delayFeedback = feedback
+          ch.delayMix = mixGain
+          // lastNode stays as dryGain (we've already connected to panNode)
+          return // Skip normal connection
+        }
+        case 'reverb': {
+          if ((fx.params.mix ?? 0) <= 0) break
+          const reverb = this.ctx.createConvolver()
+          // Generate a simple impulse response (white noise decay)
+          const sr = this.ctx.sampleRate
+          const len = sr * (fx.params.decay ?? 2)
+          const impulse = this.ctx.createBuffer(2, len, sr)
+          for (let c = 0; c < 2; c++) {
+            const data = impulse.getChannelData(c)
+            for (let i = 0; i < len; i++) {
+              data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (sr * (fx.params.decay ?? 2) * 0.3))
+            }
+          }
+          reverb.buffer = impulse
+
+          const dryGain = this.ctx.createGain()
+          dryGain.gain.value = 1 - (fx.params.mix ?? 0.2)
+          const wetGain = this.ctx.createGain()
+          wetGain.gain.value = (fx.params.mix ?? 0.2)
+
+          lastNode.connect(dryGain)
+          lastNode.connect(reverb)
+          reverb.connect(wetGain)
+          dryGain.connect(ch.panNode)
+          wetGain.connect(ch.panNode)
+          ch.reverbNode = reverb
+          ch.reverbMix = wetGain
+          return
+        }
+      }
+    }
+
+    // Connect final node to panNode → masterGain
+    lastNode.connect(ch.panNode)
   }
 
   async loadTrackBuffer(id: string, url: string, name?: string): Promise<AudioFileInfo | null> {
