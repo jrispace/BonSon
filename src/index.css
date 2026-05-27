@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-surface: #131313;
+  --color-surface-dim: #131313;
+  --color-surface-bright: #3a3939;
+  --color-surface-lowest: #0e0e0e;
+  --color-surface-low: #1c1b1b;
+  --color-surface-mid: #201f1f;
+  --color-surface-high: #2a2a2a;
+  --color-surface-highest: #353534;
+  --color-on-surface: #e5e2e1;
+  --color-on-surface-variant: #b9cacb;
+  --color-outline: #849495;
+  --color-outline-variant: #3a494b;
+  --color-primary: #00dbe7;
+  --color-primary-dim: #00aab3;
+  --color-on-primary: #00363a;
+  --color-primary-container: #00f2ff;
+  --color-secondary: #dcb8ff;
+  --color-tertiary: #ffb77d;
+  --color-error: #ffb4ab;
+  --color-recording: #ff4444;
+  --color-mute: #ff6b35;
+  --color-solo: #ffd700;
+  --font-sans: 'Geist', 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --spacing-unit: 4px;
+  --spacing-gutter: 12px;
+  --spacing-panel: 20px;
+  --radius-sm: 0.125rem;
+  --radius-base: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-surface-highest) transparent;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}

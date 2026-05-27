@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BonSon Piano Roll - Studio Grade DAW</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for the glassmorphic feel */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
+        
+        .piano-roll-grid {
+            background-size: 80px 40px, 20px 40px;
+            background-image: 
+                linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255,255,255,0.05) 1px, transparent 1px);
+        }
+        .note-glow {
+            box-shadow: 0 0 15px rgba(0, 219, 231, 0.4);
+        }
+        .c-highlight {
+            background: linear-gradient(90deg, #1c1b1b 0%, #004f54 100%);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "tertiary": "#fff5f0",
+                      "secondary-container": "#7701d0",
+                      "on-tertiary": "#4d2600",
+                      "background": "#131313",
+                      "surface-container-high": "#2a2a2a",
+                      "inverse-on-surface": "#313030",
+                      "surface-bright": "#3a3939",
+                      "on-error-container": "#ffdad6",
+                      "inverse-primary": "#00696f",
+                      "surface-container-lowest": "#0e0e0e",
+                      "surface": "#131313",
+                      "on-surface-variant": "#b9cacb",
+                      "on-secondary-fixed": "#2c0051",
+                      "on-secondary-container": "#dcb7ff",
+                      "tertiary-fixed": "#ffdcc3",
+                      "tertiary-container": "#ffd2b1",
+                      "outline-variant": "#3a494b",
+                      "secondary-fixed": "#efdbff",
+                      "surface-variant": "#353534",
+                      "on-error": "#690005",
+                      "error": "#ffb4ab",
+                      "outline": "#849495",
+                      "on-primary-fixed": "#002022",
+                      "secondary": "#dcb8ff",
+                      "primary": "#e1fdff",
+                      "inverse-surface": "#e5e2e1",
+                      "on-secondary": "#480081",
+                      "on-primary-container": "#006a71",
+                      "surface-container-low": "#1c1b1b",
+                      "secondary-fixed-dim": "#dcb8ff",
+                      "on-secondary-fixed-variant": "#6700b5",
+                      "primary-fixed": "#74f5ff",
+                      "surface-dim": "#131313",
+                      "error-container": "#93000a",
+                      "surface-tint": "#00dbe7",
+                      "surface-container-highest": "#353534",
+                      "on-tertiary-container": "#924e00",
+                      "primary-fixed-dim": "#00dbe7",
+                      "on-tertiary-fixed-variant": "#6e3900",
+                      "primary-container": "#00f2ff",
+                      "surface-container": "#201f1f",
+                      "on-tertiary-fixed": "#2f1500",
+                      "on-primary-fixed-variant": "#004f54",
+                      "tertiary-fixed-dim": "#ffb77d",
+                      "on-primary": "#00363a",
+                      "on-surface": "#e5e2e1",
+                      "on-background": "#e5e2e1"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "sidebar-width": "280px",
+                      "track-height-md": "64px",
+                      "gutter": "12px",
+                      "track-height-sm": "40px",
+                      "panel-padding": "20px",
+                      "unit": "4px"
+              },
+              "fontFamily": {
+                      "display-lg": ["Geist"],
+                      "headline-md": ["Geist"],
+                      "headline-sm": ["Geist"],
+                      "label-mono": ["JetBrains Mono"],
+                      "body-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "label-caps": ["Inter"]
+              }
+            }
+          }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background selection:bg-primary-container/30 overflow-hidden font-body-md text-body-md">
+<!-- Top Navigation Bar -->
+<header class="bg-surface/80 backdrop-blur-xl flex justify-between items-center w-full px-gutter h-track-height-md border-b border-white/10 sticky top-0 z-50 shadow-sm">
+<div class="flex items-center gap-6">
+<span class="font-display-lg text-display-lg font-bold text-primary tracking-tight">BonSon</span>
+<nav class="hidden md:flex items-center gap-4">
+<a class="text-on-surface-variant font-medium hover:text-primary-fixed-dim transition-colors duration-200 cursor-pointer active:opacity-70" href="#">Project</a>
+<a class="text-on-surface-variant font-medium hover:text-primary-fixed-dim transition-colors duration-200 cursor-pointer active:opacity-70" href="#">Edit</a>
+<a class="text-on-surface-variant font-medium hover:text-primary-fixed-dim transition-colors duration-200 cursor-pointer active:opacity-70" href="#">Mix</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1 transition-colors duration-200 cursor-pointer active:opacity-70" href="#">View</a>
+<a class="text-on-surface-variant font-medium hover:text-primary-fixed-dim transition-colors duration-200 cursor-pointer active:opacity-70" href="#">Help</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-all p-1">
+<span class="material-symbols-outlined">timer</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-all p-1">
+<span class="material-symbols-outlined">timer</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary transition-all p-1">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-white/10">
+<img alt="Producer Profile" data-alt="A professional portrait of a modern music producer with studio headphones around their neck, set against a dark cinematic background with blue and purple neon highlights to match the studio aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCD95A6Ad8o-GOm9jKD9BMZsH4jS8HzEP3YFgbvir8SQG1fpYWbhggcSYo-aRhVVFU69g1PHANlQXf_RklO4X2NqqZU2mmLV13PiUCuyckoymPHfvUxs42cL1XlFDXaIG-GTQNrDK3mjJEvvvK-h7iE5ClzJRPTF8Ng9mdQULpwh0CFm4oPvgoWb7ll-JnWYpF56oxvLfHaawnK6rWCAv9hGSPTA7KPMb2EpoboFTTx5mKOGE8FqVzCAxd332wFTHNNgOLdsVSMXHvq"/>
+</div>
+</div>
+</header>
+<div class="flex h-[calc(100vh-64px)] overflow-hidden">
+<!-- Side Navigation (Library) -->
+<aside class="bg-surface-container-low/80 backdrop-blur-xl border-r border-white/5 flex flex-col h-full w-sidebar-width py-panel-padding hidden md:flex shrink-0">
+<div class="px-6 mb-8">
+<h2 class="font-headline-sm text-headline-sm text-primary">Library</h2>
+<p class="text-label-mono font-label-mono text-on-surface-variant uppercase tracking-wider opacity-60">Studio Assets</p>
+</div>
+<nav class="flex-grow flex flex-col gap-1 px-4">
+<div class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-all rounded-xl cursor-pointer active:scale-95 duration-150">
+<span class="material-symbols-outlined">folder_open</span>
+<span class="font-body-md text-body-md">Files</span>
+</div>
+<div class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-all rounded-xl cursor-pointer active:scale-95 duration-150">
+<span class="material-symbols-outlined">graphic_eq</span>
+<span class="font-body-md text-body-md">Samples</span>
+</div>
+<div class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-all rounded-xl cursor-pointer active:scale-95 duration-150">
+<span class="material-symbols-outlined">piano</span>
+<span class="font-body-md text-body-md">Instruments</span>
+</div>
+<div class="flex items-center gap-3 p-3 text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-all rounded-xl cursor-pointer active:scale-95 duration-150">
+<span class="material-symbols-outlined">extension</span>
+<span class="font-body-md text-body-md">Plugins</span>
+</div>
+<div class="flex items-center gap-3 p-3 text-primary bg-primary-container/20 rounded-xl cursor-pointer active:scale-95 duration-150">
+<span class="material-symbols-outlined">psychology</span>
+<span class="font-body-md text-body-md">AI Tools</span>
+</div>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full py-3 bg-secondary-container text-on-secondary-container rounded-xl font-bold hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">add</span>
+                    New Track
+                </button>
+</div>
+</aside>
+<!-- Main Content Area: Piano Roll Editor -->
+<main class="flex-grow flex flex-col bg-background relative overflow-hidden">
+<!-- Toolbar -->
+<div class="h-14 bg-surface-container-high/40 backdrop-blur-md flex items-center justify-between px-6 border-b border-white/5">
+<div class="flex items-center gap-2">
+<button class="p-2 bg-primary/10 text-primary rounded-lg border border-primary/20 hover:bg-primary/20 transition-all" title="Pencil Tool">
+<span class="material-symbols-outlined">edit</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-all" title="Eraser">
+<span class="material-symbols-outlined">backspace</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-all" title="Scissors">
+<span class="material-symbols-outlined">content_cut</span>
+</button>
+<div class="h-6 w-[1px] bg-white/10 mx-2"></div>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-on-surface-variant hover:bg-white/5 transition-all">
+<span class="material-symbols-outlined text-[18px]">grid_4x4</span>
+<span class="font-label-mono text-label-mono uppercase">Quantize</span>
+</button>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-on-surface-variant hover:bg-white/5 transition-all">
+<span class="material-symbols-outlined text-[18px]">auto_fix</span>
+<span class="font-label-mono text-label-mono uppercase">Chord Assist</span>
+</button>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 bg-surface-container-lowest border border-white/5 px-3 py-1.5 rounded-full">
+<span class="text-label-mono font-label-mono text-primary/70">SCALE:</span>
+<span class="text-label-mono font-label-mono text-on-surface">C MINOR</span>
+</div>
+<button class="group flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-container text-on-primary-container font-bold hover:shadow-[0_0_15px_rgba(0,242,255,0.4)] transition-all active:scale-95 overflow-hidden relative" id="ai-suggest">
+<span class="material-symbols-outlined text-[20px] relative z-10">psychology</span>
+<span class="font-label-mono text-label-mono uppercase relative z-10">AI Suggest</span>
+<div class="absolute inset-0 bg-gradient-to-r from-primary to-secondary opacity-0 group-hover:opacity-20 transition-opacity"></div>
+</button>
+</div>
+</div>
+<!-- Editor Grid Body -->
+<div class="flex-grow flex overflow-hidden relative">
+<!-- Piano Keys (Left) -->
+<div class="w-20 bg-surface-container-low flex flex-col overflow-y-auto no-scrollbar border-r border-white/10" id="piano-keys">
+<!-- Dynamic Keys generated here -->
+</div>
+<!-- MIDI Grid Area -->
+<div class="flex-grow overflow-auto piano-roll-grid relative" id="midi-grid">
+<!-- Scale Highlighting Masks -->
+<div class="absolute inset-0 pointer-events-none" id="scale-mask"></div>
+<!-- MIDI Notes Container -->
+<div class="absolute inset-0" id="notes-container">
+<!-- Example MIDI Notes -->
+<div class="absolute h-9 w-40 bg-primary-fixed-dim/40 border border-primary-fixed-dim rounded-sm note-glow flex items-center px-2 text-[10px] font-bold text-primary-fixed cursor-pointer hover:brightness-125 transition-all" style="top: 240px; left: 80px;">
+                            C3
+                        </div>
+<div class="absolute h-9 w-20 bg-primary-fixed-dim/40 border border-primary-fixed-dim rounded-sm note-glow flex items-center px-2 text-[10px] font-bold text-primary-fixed cursor-pointer hover:brightness-125 transition-all" style="top: 160px; left: 160px;">
+                            Eb3
+                        </div>
+<div class="absolute h-9 w-60 bg-primary-fixed-dim/40 border border-primary-fixed-dim rounded-sm note-glow flex items-center px-2 text-[10px] font-bold text-primary-fixed cursor-pointer hover:brightness-125 transition-all" style="top: 120px; left: 240px;">
+                            G3
+                        </div>
+<div class="absolute h-9 w-32 bg-primary-fixed-dim/60 border-2 border-primary rounded-sm note-glow flex items-center px-2 text-[10px] font-bold text-primary cursor-pointer hover:brightness-125 transition-all" style="top: 80px; left: 320px;">
+                            Bb3
+                        </div>
+</div>
+</div>
+</div>
+<!-- Velocity Lane (Bottom) -->
+<div class="h-32 bg-surface-container-lowest/80 border-t border-white/10 flex flex-col">
+<div class="px-4 py-1 border-b border-white/5 flex justify-between items-center">
+<span class="font-label-mono text-label-mono text-on-surface-variant uppercase tracking-widest opacity-60">Velocity</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant cursor-pointer hover:text-white">expand_more</span>
+</div>
+<div class="flex-grow flex items-end gap-[1px] px-[100px] py-2">
+<!-- Velocity Bars matching the notes above -->
+<div class="w-2 bg-primary/20 h-full"></div>
+<div class="w-10 bg-primary/40 h-[80%] rounded-t-sm"></div>
+<div class="w-10 bg-primary/20 h-full"></div>
+<div class="w-5 bg-primary/60 h-[90%] rounded-t-sm"></div>
+<div class="w-15 bg-primary/20 h-full"></div>
+<div class="w-15 bg-primary/50 h-[70%] rounded-t-sm"></div>
+<div class="w-8 bg-primary/80 h-[95%] rounded-t-sm shadow-[0_-5px_10px_rgba(0,219,231,0.2)]"></div>
+<div class="w-full bg-primary/5 h-full"></div>
+</div>
+</div>
+</main>
+</div>
+<!-- Bottom Navigation Bar (Mobile Viewport Context Only - Hidden on Desktop) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-center gap-8 h-track-height-sm px-gutter bg-surface-container-highest/90 backdrop-blur-2xl border-t border-white/10 shadow-2xl">
+<div class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity cursor-pointer active:scale-98">
+<span class="material-symbols-outlined">tune</span>
+<span class="font-label-caps text-label-caps font-label-mono text-label-mono uppercase">Mixer</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-6 py-1 cursor-pointer active:scale-98">
+<span class="material-symbols-outlined">keyboard</span>
+<span class="font-label-caps text-label-caps font-label-mono text-label-mono uppercase">Piano Roll</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity cursor-pointer active:scale-98">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-label-caps text-label-caps font-label-mono text-label-mono uppercase">Audio Editor</span>
+</div>
+</nav>
+<script>
+        // Generate Piano Keys
+        const pianoKeysContainer = document.getElementById('piano-keys');
+        const notes = ['B', 'Bb', 'A', 'Ab', 'G', 'Gb', 'F', 'E', 'Eb', 'D', 'Db', 'C'];
+        const octaves = [4, 3, 2];
+        
+        octaves.forEach(octave => {
+            notes.forEach(note => {
+                const key = document.createElement('div');
+                const isBlack = note.includes('b');
+                const isC = note === 'C';
+                
+                key.className = `flex-shrink-0 h-10 w-full border-b border-white/10 relative flex items-center justify-end pr-2 transition-all cursor-pointer hover:bg-white/5 active:bg-primary/20`;
+                
+                if (isBlack) {
+                    key.classList.add('bg-black');
+                } else if (isC) {
+                    key.classList.add('c-highlight');
+                } else {
+                    key.classList.add('bg-surface-container-low');
+                }
+
+                key.innerHTML = `<span class="text-[9px] font-label-mono text-on-surface-variant ${isC ? 'text-primary font-bold' : 'opacity-40'}">${note}${octave}</span>`;
+                pianoKeysContainer.appendChild(key);
+            });
+        });
+
+        // AI Assistant Toast Interaction
+        document.getElementById('ai-suggest').addEventListener('click', () => {
+            const toast = document.createElement('div');
+            toast.className = 'fixed bottom-24 right-8 bg-surface-container-high/90 border border-primary/20 backdrop-blur-2xl p-6 rounded-2xl shadow-2xl max-w-xs animate-bounce-short z-[100]';
+            toast.innerHTML = `
+                <div class="flex gap-4 items-start">
+                    <span class="material-symbols-outlined text-primary">psychology</span>
+                    <div>
+                        <h4 class="font-headline-sm text-headline-sm text-primary text-[14px] mb-1">AI Suggestion</h4>
+                        <p class="text-on-surface-variant text-[12px] leading-relaxed mb-4">I've generated a C Minor tension-builder based on your rhythm. Apply "Dark Cinematic" progression?</p>
+                        <div class="flex gap-2">
+                            <button class="px-3 py-1 bg-primary text-on-primary text-[11px] font-bold rounded-lg uppercase">Apply</button>
+                            <button class="px-3 py-1 border border-white/10 text-[11px] font-bold rounded-lg uppercase" onclick="this.parentElement.parentElement.parentElement.parentElement.remove()">Dismiss</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.classList.remove('animate-bounce-short'), 1000);
+        });
+    </script>
+</body></html>

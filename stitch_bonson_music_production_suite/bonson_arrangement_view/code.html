@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>BonSon Arrangement View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Geist:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@400;500&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=Inter:wght@100..900&amp;family=JetBrains+Mono:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .timeline-grid {
+            background-size: 80px 100%;
+            background-image: linear-gradient(to right, rgba(255,255,255,0.05) 1px, transparent 1px);
+        }
+        .waveform-path {
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 1.5;
+            stroke-linecap: round;
+        }
+        /* Custom scrollbar for DAW feel */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #353534; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #849495; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                "tertiary": "#fff5f0",
+                "secondary-container": "#7701d0",
+                "on-tertiary": "#4d2600",
+                "background": "#131313",
+                "surface-container-high": "#2a2a2a",
+                "inverse-on-surface": "#313030",
+                "surface-bright": "#3a3939",
+                "on-error-container": "#ffdad6",
+                "inverse-primary": "#00696f",
+                "surface-container-lowest": "#0e0e0e",
+                "surface": "#131313",
+                "on-surface-variant": "#b9cacb",
+                "on-secondary-fixed": "#2c0051",
+                "on-secondary-container": "#dcb7ff",
+                "tertiary-fixed": "#ffdcc3",
+                "tertiary-container": "#ffd2b1",
+                "outline-variant": "#3a494b",
+                "secondary-fixed": "#efdbff",
+                "surface-variant": "#353534",
+                "on-error": "#690005",
+                "error": "#ffb4ab",
+                "outline": "#849495",
+                "on-primary-fixed": "#002022",
+                "secondary": "#dcb8ff",
+                "primary": "#e1fdff",
+                "inverse-surface": "#e5e2e1",
+                "on-secondary": "#480081",
+                "on-primary-container": "#006a71",
+                "surface-container-low": "#1c1b1b",
+                "secondary-fixed-dim": "#dcb8ff",
+                "on-secondary-fixed-variant": "#6700b5",
+                "primary-fixed": "#74f5ff",
+                "surface-dim": "#131313",
+                "error-container": "#93000a",
+                "surface-tint": "#00dbe7",
+                "surface-container-highest": "#353534",
+                "on-tertiary-container": "#924e00",
+                "primary-fixed-dim": "#00dbe7",
+                "on-tertiary-fixed-variant": "#6e3900",
+                "primary-container": "#00f2ff",
+                "surface-container": "#201f1f",
+                "on-tertiary-fixed": "#2f1500",
+                "on-primary-fixed-variant": "#004f54",
+                "tertiary-fixed-dim": "#ffb77d",
+                "on-primary": "#00363a",
+                "on-surface": "#e5e2e1",
+                "on-background": "#e5e2e1"
+              },
+              "borderRadius": {
+                "DEFAULT": "0.125rem",
+                "lg": "0.25rem",
+                "xl": "0.5rem",
+                "full": "0.75rem"
+              },
+              "spacing": {
+                "sidebar-width": "280px",
+                "track-height-md": "64px",
+                "gutter": "12px",
+                "track-height-sm": "40px",
+                "panel-padding": "20px",
+                "unit": "4px"
+              },
+              "fontFamily": {
+                "display-lg": ["Geist"],
+                "headline-md": ["Geist"],
+                "headline-sm": ["Geist"],
+                "label-mono": ["JetBrains Mono"],
+                "body-lg": ["Inter"],
+                "body-md": ["Inter"],
+                "label-caps": ["Inter"]
+              },
+              "fontSize": {
+                "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                "label-mono": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500" }],
+                "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                "label-caps": ["10px", { "lineHeight": "12px", "letterSpacing": "0.1em", "fontWeight": "700" }]
+              }
+            },
+          },
+        }
+    </script>
+</head>
+<body class="bg-background text-on-surface selection:bg-primary/30 overflow-hidden h-screen flex flex-col font-body-md">
+<!-- TopNavBar -->
+<header class="bg-surface/80 backdrop-blur-xl text-primary font-display-lg text-display-lg font-headline-md text-headline-md font-body-md text-body-md docked full-width top-0 bg-surface-container-high/80 border-b border-white/10 backdrop-blur-2xl shadow-sm flex justify-between items-center w-full px-gutter h-track-height-md z-50">
+<div class="flex items-center gap-6">
+<span class="font-display-lg text-headline-md font-bold text-primary tracking-tighter">BonSon</span>
+<nav class="hidden md:flex gap-4">
+<span class="cursor-pointer active:opacity-70 text-primary font-bold border-b-2 border-primary pb-1 font-body-md text-body-md">Project</span>
+<span class="cursor-pointer active:opacity-70 text-on-surface-variant font-medium hover:text-primary-fixed-dim transition-colors duration-200 font-body-md text-body-md">Edit</span>
+<span class="cursor-pointer active:opacity-70 text-on-surface-variant font-medium hover:text-primary-fixed-dim transition-colors duration-200 font-body-md text-body-md">Mix</span>
+<span class="cursor-pointer active:opacity-70 text-on-surface-variant font-medium hover:text-primary-fixed-dim transition-colors duration-200 font-body-md text-body-md">View</span>
+<span class="cursor-pointer active:opacity-70 text-on-surface-variant font-medium hover:text-primary-fixed-dim transition-colors duration-200 font-body-md text-body-md">Help</span>
+</nav>
+</div>
+<!-- Transport Controls -->
+<div class="flex items-center bg-surface-container-lowest/50 rounded-full px-4 py-1 border border-white/5 gap-4">
+<div class="flex items-center gap-2">
+<button class="p-1 hover:text-primary transition-colors cursor-pointer active:scale-95"><span class="material-symbols-outlined text-lg">stop</span></button>
+<button class="p-1 text-primary-fixed-dim hover:text-primary transition-colors cursor-pointer active:scale-95"><span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span></button>
+<button class="p-1 text-error hover:opacity-80 transition-opacity cursor-pointer active:scale-95"><span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">fiber_manual_record</span></button>
+<button class="p-1 text-on-surface-variant hover:text-primary transition-colors cursor-pointer active:scale-95"><span class="material-symbols-outlined text-lg">loop</span></button>
+</div>
+<div class="h-4 w-px bg-white/10"></div>
+<div class="flex gap-4 font-label-mono text-label-mono">
+<div class="flex flex-col items-center">
+<span class="text-[10px] opacity-40 uppercase">Tempo</span>
+<span class="text-primary-fixed">120.00</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="text-[10px] opacity-40 uppercase">Time</span>
+<span class="text-primary-fixed">4 / 4</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="text-[10px] opacity-40 uppercase">Pos</span>
+<span class="text-primary-fixed">001.01.00</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors" data-icon="metronome">timer</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors" data-icon="timer">timer</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors" data-icon="settings">settings</span>
+<img alt="Producer Profile" class="w-8 h-8 rounded-full border border-primary/20 object-cover" data-alt="Close-up portrait of a professional music producer in a dimly lit studio environment with purple and blue neon backlighting. The producer wears high-end open-back studio headphones. The lighting is moody and cinematic, reflecting off a polished glass desk surface. Style is sleek, high-end, and focused." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0IDAlIGjZlH6wDJrBKNk_ei2OzFjH5I9EdLEoUvX-c2NCzXghZ4B1Jz1i-p4WJpo-vgCB-i-4q0w-yqttRxloNG7Qjd_MsQHm_pLJU38kUcCv3y7SXRzUZXdTKx8M4O6suJ_Vi5dMcBnP4aneUVGCb56-tEWGVBGrzOLO2-RDLgud9j9GG3mvOVQ375wl4NYwYSa53nViL1ZWjYv3UHnMtvDqjwtfcr-OtPT6dBCabDxmxkFwzYdqirZOYMdP3gQjRnrXN-X61CL4"/>
+</div>
+</header>
+<div class="flex flex-1 overflow-hidden relative">
+<!-- SideNavBar -->
+<aside class="bg-surface-container-low/80 backdrop-blur-xl text-secondary font-label-mono text-label-mono font-body-md text-body-md docked left-0 h-full w-sidebar-width bg-surface-container-low/80 border-r border-white/5 backdrop-blur-2xl flat no shadows flex flex-col h-screen py-panel-padding z-40">
+<div class="px-6 mb-8">
+<h2 class="font-headline-sm text-headline-sm text-primary mb-1">Library</h2>
+<p class="text-on-surface-variant text-[11px] opacity-60">Studio Assets</p>
+<button class="mt-4 w-full py-2 bg-primary-container/10 border border-primary/20 text-primary rounded-xl font-body-md hover:bg-primary-container/20 transition-all active:scale-95 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">add</span> New Track
+                </button>
+</div>
+<nav class="flex-1 flex flex-col gap-1 px-3">
+<div class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-all active:scale-95 duration-150 rounded-xl cursor-pointer">
+<span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
+<span>Files</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-primary bg-primary-container/20 rounded-xl active:scale-95 duration-150 cursor-pointer">
+<span class="material-symbols-outlined" data-icon="graphic_eq">graphic_eq</span>
+<span>Samples</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-all active:scale-95 duration-150 rounded-xl cursor-pointer">
+<span class="material-symbols-outlined" data-icon="piano">piano</span>
+<span>Instruments</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-all active:scale-95 duration-150 rounded-xl cursor-pointer">
+<span class="material-symbols-outlined" data-icon="extension">extension</span>
+<span>Plugins</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-white/5 hover:text-on-surface transition-all active:scale-95 duration-150 rounded-xl cursor-pointer">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+<span>AI Tools</span>
+</div>
+</nav>
+<div class="px-3 pt-4 border-t border-white/5 mt-auto pb-20">
+<div class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-white/5 transition-all rounded-xl cursor-pointer">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span>Settings</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-white/5 transition-all rounded-xl cursor-pointer">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+<span>Support</span>
+</div>
+</div>
+</aside>
+<!-- Main Arrangement View -->
+<main class="flex-1 flex flex-col min-w-0 bg-[#0a0a0a]">
+<!-- Timeline Ruler -->
+<div class="h-8 bg-surface-container-lowest border-b border-white/10 flex relative font-label-mono text-[10px] text-on-surface-variant/40">
+<div class="w-64 border-r border-white/10 flex items-center px-4">Arrangement</div>
+<div class="flex-1 flex items-center relative overflow-hidden">
+<div class="flex w-full justify-around">
+<span>1</span><span>5</span><span>9</span><span>13</span><span>17</span><span>21</span><span>25</span><span>29</span><span>33</span><span>37</span>
+</div>
+<!-- Playhead -->
+<div class="absolute top-0 left-1/4 h-[2000px] w-[2px] bg-primary z-30 shadow-[0_0_8px_rgba(0,219,231,0.8)]">
+<div class="absolute -top-1 -left-[5px] w-3 h-3 bg-primary rotate-45"></div>
+</div>
+</div>
+</div>
+<!-- Tracks Area -->
+<div class="flex-1 overflow-y-auto timeline-grid relative">
+<!-- Track List -->
+<div class="flex flex-col">
+<!-- Track 1: Vocal Lead (Active) -->
+<div class="h-track-height-md flex border-b border-white/5 bg-primary/5">
+<div class="w-64 bg-surface-container-high/40 p-2 border-r border-white/10 flex flex-col justify-between group">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-sm text-primary">Vocal Lead</span>
+<div class="flex gap-1">
+<button class="w-5 h-5 flex items-center justify-center rounded bg-surface-container text-[10px] font-bold hover:bg-surface-bright">M</button>
+<button class="w-5 h-5 flex items-center justify-center rounded bg-secondary text-on-secondary text-[10px] font-bold">S</button>
+<button class="w-5 h-5 flex items-center justify-center rounded bg-error/20 text-error text-[10px] font-bold">R</button>
+</div>
+</div>
+<input class="w-full h-1 bg-surface-variant rounded-full appearance-none accent-primary cursor-pointer" type="range" value="75"/>
+</div>
+<div class="flex-1 relative flex items-center">
+<div class="absolute left-[20%] w-[35%] h-12 rounded-lg bg-secondary-container/30 border border-secondary/40 backdrop-blur-sm overflow-hidden flex items-center px-2">
+<div class="absolute inset-0 opacity-40">
+<svg class="w-full h-full text-secondary" viewbox="0 0 400 64">
+<path class="waveform-path" d="M0 32 Q 5 10 10 32 T 20 32 T 30 50 T 40 32 T 50 15 T 60 32 T 70 45 T 80 32 T 90 20 T 100 32 T 110 32 T 120 42 T 130 32 T 140 10 T 150 32 T 160 55 T 170 32 T 180 25 T 190 32 T 200 32 T 210 42 T 220 32 T 230 10 T 240 32 T 250 55 T 260 32 T 270 25 T 280 32 T 290 32 T 300 42 T 310 32 T 320 10 T 330 32 T 340 55 T 350 32 T 360 25 T 370 32 T 380 32 T 390 42 T 400 32"></path>
+</svg>
+</div>
+<span class="text-[10px] text-secondary font-label-mono z-10">Lead_Vocal_Final.wav</span>
+</div>
+</div>
+</div>
+<!-- Track 2: Arp Synth -->
+<div class="h-track-height-md flex border-b border-white/5">
+<div class="w-64 bg-surface-container-high/40 p-2 border-r border-white/10 flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-sm text-on-surface opacity-80">Arp Synth</span>
+<div class="flex gap-1">
+<button class="w-5 h-5 flex items-center justify-center rounded bg-surface-container text-[10px] font-bold">M</button>
+<button class="w-5 h-5 flex items-center justify-center rounded bg-surface-container text-[10px] font-bold">S</button>
+</div>
+</div>
+<input class="w-full h-1 bg-surface-variant rounded-full appearance-none accent-primary cursor-pointer" type="range" value="45"/>
+</div>
+<div class="flex-1 relative flex items-center">
+<div class="absolute left-[5%] w-[40%] h-12 rounded-lg bg-primary-container/20 border border-primary/30 flex items-center p-1 gap-1">
+<div class="w-1 h-2 bg-primary/60 rounded-full"></div>
+<div class="w-1 h-3 bg-primary/60 rounded-full"></div>
+<div class="w-1 h-5 bg-primary/60 rounded-full"></div>
+<div class="w-1 h-2 bg-primary/60 rounded-full"></div>
+<span class="text-[10px] text-primary/80 font-label-mono ml-2">Arp Pattern 01</span>
+</div>
+</div>
+</div>
+<!-- Track 3: Sub Bass -->
+<div class="h-track-height-md flex border-b border-white/5">
+<div class="w-64 bg-surface-container-high/40 p-2 border-r border-white/10 flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-sm text-on-surface opacity-80">Sub Bass</span>
+<div class="flex gap-1">
+<button class="w-5 h-5 flex items-center justify-center rounded bg-surface-container text-[10px] font-bold">M</button>
+<button class="w-5 h-5 flex items-center justify-center rounded bg-surface-container text-[10px] font-bold">S</button>
+</div>
+</div>
+<input class="w-full h-1 bg-surface-variant rounded-full appearance-none accent-primary cursor-pointer" type="range" value="60"/>
+</div>
+<div class="flex-1 relative flex items-center">
+<div class="absolute left-[5%] w-[60%] h-12 rounded-lg bg-primary-container/20 border border-primary/30 flex items-center p-1 px-3">
+<span class="text-[10px] text-primary/80 font-label-mono">Deep_Sub_MIDI</span>
+</div>
+</div>
+</div>
+<!-- Track 4: Drum Kit -->
+<div class="h-track-height-md flex border-b border-white/5">
+<div class="w-64 bg-surface-container-high/40 p-2 border-r border-white/10 flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-headline-sm text-sm text-on-surface opacity-80">Drum Kit</span>
+<div class="flex gap-1">
+<button class="w-5 h-5 flex items-center justify-center rounded bg-surface-container text-[10px] font-bold">M</button>
+<button class="w-5 h-5 flex items-center justify-center rounded bg-surface-container text-[10px] font-bold">S</button>
+</div>
+</div>
+<input class="w-full h-1 bg-surface-variant rounded-full appearance-none accent-primary cursor-pointer" type="range" value="85"/>
+</div>
+<div class="flex-1 relative flex items-center">
+<div class="absolute left-[5%] w-[20%] h-12 rounded-lg bg-tertiary-container/20 border border-tertiary-fixed-dim/40 flex items-center px-3">
+<span class="text-[10px] text-tertiary-fixed-dim/80 font-label-mono">Main_Groove_01</span>
+</div>
+<div class="absolute left-[25%] w-[20%] h-12 rounded-lg bg-tertiary-container/20 border border-tertiary-fixed-dim/40 flex items-center px-3">
+<span class="text-[10px] text-tertiary-fixed-dim/80 font-label-mono">Main_Groove_01</span>
+</div>
+<div class="absolute left-[45%] w-[20%] h-12 rounded-lg bg-tertiary-container/20 border border-tertiary-fixed-dim/40 flex items-center px-3">
+<span class="text-[10px] text-tertiary-fixed-dim/80 font-label-mono">Main_Groove_02</span>
+</div>
+</div>
+</div>
+<!-- Repeat Tracks to fill space -->
+<div class="h-track-height-md flex border-b border-white/5 opacity-50">
+<div class="w-64 bg-surface-container-high/20 p-2 border-r border-white/10 flex flex-col justify-between">
+<span class="font-headline-sm text-sm">Pad Texture</span>
+</div>
+<div class="flex-1"></div>
+</div>
+<div class="h-track-height-md flex border-b border-white/5 opacity-50">
+<div class="w-64 bg-surface-container-high/20 p-2 border-r border-white/10 flex flex-col justify-between">
+<span class="font-headline-sm text-sm">FX Noise</span>
+</div>
+<div class="flex-1"></div>
+</div>
+<div class="h-track-height-md flex border-b border-white/5 opacity-50">
+<div class="w-64 bg-surface-container-high/20 p-2 border-r border-white/10 flex flex-col justify-between">
+<span class="font-headline-sm text-sm">Strings High</span>
+</div>
+<div class="flex-1"></div>
+</div>
+</div>
+</div>
+</main>
+<!-- Inspector Panel -->
+<aside class="w-72 bg-surface-container-high border-l border-white/10 flex flex-col">
+<div class="p-4 border-b border-white/5 glass-panel bg-white/5">
+<h3 class="font-headline-sm text-primary mb-1">Inspector</h3>
+<p class="text-xs text-on-surface-variant uppercase tracking-widest font-label-mono">Vocal Lead</p>
+</div>
+<div class="p-4 flex-1 overflow-y-auto space-y-6">
+<!-- EQ Visualizer -->
+<div>
+<span class="text-[10px] text-on-surface-variant font-label-mono uppercase mb-2 block">Visualizer</span>
+<div class="h-32 bg-background/50 rounded-lg border border-white/5 relative overflow-hidden">
+<svg class="w-full h-full" preserveaspectratio="none">
+<path class="opacity-80" d="M0 80 Q 50 20, 100 70 T 200 60 T 300 100" fill="none" stroke="#00dbe7" stroke-width="2"></path>
+<path class="opacity-20" d="M0 128 L0 80 Q 50 20, 100 70 T 200 60 T 300 100 L300 128 Z" fill="url(#grad1)"></path>
+<defs>
+<lineargradient id="grad1" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" style="stop-color:#00dbe7;stop-opacity:1"></stop>
+<stop offset="100%" style="stop-color:#00dbe7;stop-opacity:0"></stop>
+</lineargradient>
+</defs>
+</svg>
+<div class="absolute inset-0 flex items-end justify-between px-2 pb-1 opacity-20 font-label-mono text-[8px]">
+<span>20Hz</span><span>1kHz</span><span>20kHz</span>
+</div>
+</div>
+</div>
+<!-- Properties -->
+<div class="space-y-4">
+<div class="flex justify-between items-center">
+<span class="text-xs text-on-surface-variant">Gain</span>
+<span class="text-xs font-label-mono text-primary">-2.4 dB</span>
+</div>
+<div class="h-1 bg-surface-variant rounded-full"><div class="h-full w-2/3 bg-primary rounded-full"></div></div>
+<div class="flex justify-between items-center">
+<span class="text-xs text-on-surface-variant">Pan</span>
+<span class="text-xs font-label-mono text-primary">C</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[8px] text-on-surface-variant">L</span>
+<div class="flex-1 h-1 bg-surface-variant rounded-full relative">
+<div class="absolute left-1/2 -ml-0.5 h-full w-1 bg-white/20"></div>
+<div class="absolute left-1/2 -ml-1 h-3 -mt-1 w-2 bg-primary rounded-sm"></div>
+</div>
+<span class="text-[8px] text-on-surface-variant">R</span>
+</div>
+</div>
+<!-- Inserts -->
+<div>
+<span class="text-[10px] text-on-surface-variant font-label-mono uppercase mb-3 block">FX Inserts</span>
+<div class="space-y-2">
+<div class="p-2 rounded bg-surface-container-highest border-l-2 border-primary-container text-xs flex justify-between items-center group cursor-pointer hover:bg-surface-bright">
+<span class="text-primary">Pro-Q 3</span>
+<span class="material-symbols-outlined text-sm opacity-0 group-hover:opacity-100">power_settings_new</span>
+</div>
+<div class="p-2 rounded bg-surface-container-highest border-l-2 border-primary-container text-xs flex justify-between items-center group cursor-pointer hover:bg-surface-bright">
+<span class="text-primary">Compressor</span>
+<span class="material-symbols-outlined text-sm opacity-0 group-hover:opacity-100">power_settings_new</span>
+</div>
+<div class="p-2 rounded bg-surface-container-highest border-l-2 border-secondary-container text-xs flex justify-between items-center group cursor-pointer hover:bg-surface-bright">
+<span class="text-secondary">ValhallaVerb</span>
+<span class="material-symbols-outlined text-sm opacity-0 group-hover:opacity-100">power_settings_new</span>
+</div>
+<div class="p-2 border border-dashed border-white/10 rounded text-center text-[10px] text-on-surface-variant/40 hover:border-white/20 cursor-pointer">
+                            Click to add insert
+                        </div>
+</div>
+</div>
+</div>
+</aside>
+</div>
+<!-- BottomNavBar -->
+<footer class="bg-surface-container-highest/90 backdrop-blur-2xl text-tertiary-fixed-dim font-label-caps text-label-caps font-label-mono text-label-mono docked full-width bottom-0 rounded-t-xl bg-surface-container-highest border-t border-white/10 shadow-2xl fixed bottom-0 left-0 w-full z-50 flex justify-center gap-8 h-track-height-sm px-gutter">
+<div class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-6 py-1 cursor-pointer active:scale-98 transition-opacity">
+<span class="material-symbols-outlined text-sm" data-icon="tune">tune</span>
+<span class="uppercase text-[9px] mt-0.5">Mixer</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity cursor-pointer active:scale-98">
+<span class="material-symbols-outlined text-sm" data-icon="keyboard">keyboard</span>
+<span class="uppercase text-[9px] mt-0.5">Piano Roll</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant opacity-60 hover:opacity-100 transition-opacity cursor-pointer active:scale-98">
+<span class="material-symbols-outlined text-sm" data-icon="analytics">analytics</span>
+<span class="uppercase text-[9px] mt-0.5">Audio Editor</span>
+</div>
+</footer>
+<!-- Atmosphere Micro-interactions -->
+<script>
+        document.addEventListener('mousemove', (e) => {
+            const cursorGlow = document.getElementById('cursor-glow');
+            if (cursorGlow) {
+                cursorGlow.style.left = e.clientX + 'px';
+                cursorGlow.style.top = e.clientY + 'px';
+            }
+        });
+
+        // Simple playhead movement simulation
+        let playheadPos = 25;
+        const playhead = document.querySelector('.absolute.top-0.left-1\\/4');
+        setInterval(() => {
+            playheadPos += 0.05;
+            if (playheadPos > 100) playheadPos = 0;
+            if (playhead) playhead.style.left = playheadPos + '%';
+        }, 50);
+    </script>
+<div class="fixed w-96 h-96 -ml-48 -mt-48 bg-primary/5 rounded-full blur-[100px] pointer-events-none z-0" id="cursor-glow"></div>
+</body></html>
